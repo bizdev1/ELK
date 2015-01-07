@@ -303,3 +303,19 @@ Here is an example of Logstash configuration.
 * [logstash-cfe3-with-udp-nxlog.conf](https://github.com/phnakarin/ELK/blob/master/logstash/conf.d/logstash-cfe3-with-udp-nxlog.conf)
 
 ### Nxlog
+On every Nxlog clients, we need to have root CA locate locally. We can simply `scp` from Logstash server to client hosts.
+```
+logstash# scp /etc/pki/tls/certs/rootCA.pem root@CLIENT001:/root
+```
+Then on the client host, we move it to `/etc/pki/tls/certs` to be ready to add to Nxlog configuration.
+```
+sudo mkdir -p /etc/pki/tls/certs
+sudo cp /root/rootCA.pem /etc/pki/tls/certs/rootCA.pem
+```
+Here is an example of Nxlog configuration.
+* [ssl-nxlog.conf](https://github.com/phnakarin/ELK/blob/master/nxlog/ssl-nxlog.conf)
+* [udp-nxlog.conf](https://github.com/phnakarin/ELK/blob/master/nxlog/udp-nxlog.conf)
+
+Once all components are up and running. Then we can head on over to Kibana, choose the included `"Logstash Dashboard"` and look at all your pretty logs! or you can even inspect your performance and data directly from Elasticsearch Bigdesk or elasticsearch-head.
+
+**"Have a lot of fun ..." :-P**
