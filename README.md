@@ -40,23 +40,11 @@ Then install Elasticsearch 1.1.1
 ```
 sudo apt-get -y install elasticsearch=1.1.1
 ```
-Elasticsearch is now installed. Let's edit the configuration:
-```
-sudo vim /etc/elasticsearch/elasticsearch.yml
-```
-Add the following line somewhere in the file, to disable dynamic scripts:
-```
-script.disable_dynamic: true
-```
-**Optional**: *If you want to restrict outside access to your Elasticsearch instance (port 9200), so outsiders cannot read your data or shutdown your Elasticseach cluster through the HTTP API. Find the line that specifies network.host and uncomment it so it looks like this:*
-```
-network.host: localhost
-```
-Save and exit `elasticsearch.yml`. Now start Elasticsearch:
+Elasticsearch is now installed. Let's start the process:
 ```
 sudo service elasticsearch restart
 ```
-Then run the following command to start Elasticsearch on boot up:
+and run the following command to start Elasticsearch on boot up:
 ```
 sudo update-rc.d elasticsearch defaults 95 10
 ```
@@ -118,6 +106,166 @@ sudo chown -R www-data:www-data /var/www
 * Configuration: `/etc/logstash/conf.d`
 * Logs: `/var/log/logstash`
 
-### Nginx
+### Nginx:
 * Binaries, configuration and stuff: `/etc/nginx`
 * Logs: `/var/log/nginx`
+
+### Kibana
+* Everything is in: `/var/www/kibana3`
+ 
+
+## Configurations
+### Elasticsearch
+
+Elasticsearch has sane defaults that work well for Logstash, so I'm pretty much going to leave it alone except for someone who would like to improve security. Let's edit the configuration to make it more secure:
+```
+sudo vim /etc/elasticsearch/elasticsearch.yml
+```
+Add the following line somewhere in the file, to disable dynamic scripts:
+```
+script.disable_dynamic: true
+```
+**Optional**: *If you want to restrict outside access to your Elasticsearch instance (port 9200), so outsiders cannot read your data or shutdown your Elasticseach cluster through the HTTP API. Find the line that specifies network.host and uncomment it so it looks like this:*
+```
+network.host: localhost
+```
+Save and exit `elasticsearch.yml`. Now start Elasticsearch:
+```
+sudo service elasticsearch restart
+```
+There are some plugins that I like to have installed: `Bigdesk` and `elasticsearch-head`
+#### Bigdesk 
+> In simple words bigdesk makes it very easy to see how your Elasticsearch cluster is doing. Just install it as an Elasticsearch plugin, download locally or run online from the web, then point it to the Elasticsearch node REST endpoint and have fun.
+
+To install, run:
+```
+sudo /usr/share/elasticsearch/bin/plugin -install lukas-vlcek/bigdesk/2.4.0 
+```
+Bigdesk can be accessible at `http://localhost:9200/_plugin/bigdesk/`
+
+#### elasticsearch-head
+> elasticsearch-head is a web front end for browsing and interacting with an Elastic Search cluster.
+
+To install, run:
+```
+sudo /usr/share/elasticsearch/bin/plugin -install mobz/elasticsearch-head
+```
+elasticsearch-head can be accessible at `http://localhost:9200/_plugin/head/`
+
+### Nginx and Kibana
+
+Kibana's defaults work great as well, so I won't change its configuration either (actually I don't know how to yet :-/). I, however, do have to configure Nginx where to find and Kibana on this server. Let's edit Nginx configuration:
+```
+sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.orig
+sudo vim /etc/nginx/sites-available/default
+```
+Find and change the values of the server_name to your FQDN (or localhost if you aren't using a domain name) and root to where we installed Kibana, so they look like the following entries:
+```
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server ipv6only=on;
+
+	root /usr/share/nginx/html;
+	index index.html index.htm;
+
+	# Make site accessible from http://localhost/
+	server_name FQDN;
+
+	location / {
+		# First attempt to serve request as file, then
+		# as directory, then fall back to displaying a 404.
+		try_files $uri $uri/ =404;
+		# Uncomment to enable naxsi on this location
+		# include /etc/nginx/naxsi.rules
+	}
+
+  location /kibana3 {
+    alias /srv/www/kibana3/;
+		try_files $uri $uri/ =404;
+  }
+```
+Then, a quick `sudo service nginx reload` should have it working.
+
+### Generate SSL Certificates
+My intention of this setup is to transfer CFEngine logs via SSL (or TLS if you want to be super totally correct) to gain benifits of
+* Privacy (stop looking at my password)
+* Integrity (data has not been altered in flight)
+* Trust (you are who you say you are)
+
+So I have to use `OpenSSL` to create my own private certificate autority. OpenSSL is a free utility that comes with most installations of MacOS X, Linux, the *BSDs, and UNIXes. You can also download a binary copy to run on your Windows installation.
+
+The process for creating your own certificate authority is pretty straight forward:
+
+1. Create a private key
+2. Self-sign
+3. Install root CA on your various workstations
+
+Once you do that, every device that you manage via HTTPS just needs to have its own certificate created with the following steps:
+
+1. Create CSR for device
+2. Sign CSR with root CA key
+
+Let's do it!
+
+##### Create the Root Certificate
+Create the directories that will store the certificate and private key with the following commands:
+```
+sudo mkdir -p /etc/pki/tls/certs
+sudo mkdir /etc/pki/tls/private
+```
+Create the Root Key: (keep this **very private!**. This is the basis of all trust for your certificates, and if someone gets a hold of it, they can generate certificates that your system will accept.)
+```
+sudo openssl genrsa -out /etc/pki/tls/private/rootCA.key 2048
+```
+Next step is to self-sign this certificate:
+```
+sudo openssl req -x509 -new -nodes -key /etc/pki/tls/private/rootCA.key -days 3650 -out /etc/pki/tls/certs/rootCA.pem
+```
+This will start an interactive script which will ask you for various bits of information. Fill it out as you see fit.
+```
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:NO
+State or Province Name (full name) [Some-State]:Oslo
+Locality Name (eg, city) []:Oslo
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:CFEngineers.net
+Organizational Unit Name (eg, section) []:IT
+Common Name (eg, YOUR name) []:Nakarin Phooripoom
+Email Address []:mynameisjeang@gmail.com
+```
+Once done, this will create an SSL certificate called `rootCA.pem`, signed by itself, valid for 3650 days, and it will act as our root certificate. **This is the one that we are going to distribute to all client hosts so Nxlog will use to be able to communicate back to Logstash**
+
+#### Create A Certificate (Done Once for Logstash)
+Only on Logstash server. You will need to create another private key.
+```
+sudo openssl genrsa -out /etc/pki/tls/private/logstash.key 2048
+```
+Then generate certificate signing request:
+```
+sudo openssl req -new -key /etc/pki/tls/private/logstash.key -out /etc/pki/tls/certs/logstash.csr
+```
+You will be asked various questions. The important question to answer though is **common-name**.
+```
+Common Name (eg, YOUR name) []: 10.0.1.11
+```
+If it doesn’t match your IP address, even a properly signed certificate will not validate correctly and you will get the `“cannot verify authenticity”` error. Once that’s done, you will sign the CSR, which requires the root CA key.
+```
+sudo openssl x509 -req -in /etc/pki/tls/certs/logstash.csr -CA /etc/pki/tls/certs/rootCA.pem -CAkey /etc/pki/tls/private/rootCA.key -CAcreateserial -out /etc/pki/tls/certs/logstash.crt -days 3650
+```
+This creates a signed certificate called `logstash.crt` which is valid for 3650 days. To be ready to use in Logstash configuration.
+
+### Logstash
+This is biggie! When logstash is started using its initscript, it'll simply check `/etc/logstash/conf.d` for configuration files and load them in. Recommended to read first.
+
+Useful references:
+* [Logstash's website](http://www.logstash.net)
+* [Configuration overview page](http://logstash.net/docs/1.4.2/configuration)
+
+Once you have written a configuration, you can test it by running `/opt/logstash/bin/logstash -t -f /etc/logstash/conf.d/` Then, when the config-test succeeds, just run `sudo service logstash start` to get going, and `tail -f /var/log/logstash/logstash.log` to make sure that everything is OK.
+
+Here is an example of SSL input Logstash.
