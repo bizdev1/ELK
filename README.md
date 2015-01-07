@@ -198,7 +198,6 @@ server {
 	root /usr/share/nginx/html;
 	index index.html index.htm;
 
-	# Make site accessible from http://localhost/
 	server_name FQDN;
 
 	location / {
@@ -210,7 +209,7 @@ server {
 	}
 
   location /kibana3 {
-    alias /srv/www/kibana3/;
+    alias /var/www/kibana3/;
 		try_files $uri $uri/ =404;
   }
 ```
