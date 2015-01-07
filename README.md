@@ -93,6 +93,32 @@ We better should ensure ownership of Kibana to `www-data` as well:
 ```
 sudo chown -R www-data:www-data /var/www
 ```
+### Install Nxlog
+
+Download packages from here.
+* [Nxlog Community Edition](http://nxlog.org/products/nxlog-community-edition/download)
+
+We have to install the dependencies first. To list the dependencies, use the following command:
+```
+sudo dpkg-deb -f nxlog_1.4.581_amd64.deb Depends
+```
+Then make sure all listed dependencies are installed. Alternatively you can run `apt-get install -f` after trying
+to install the package with dpkg and getting an error due to the missing dependencies.
+
+To install the deb package, issue the following command as root:
+```
+sudo dpkg -i nxlog_1.4.581_amd64.deb
+```
+To install the rpm package with the following command:
+```
+rpm –ivh nxlog-1.4.581-1.x86_64.rpm
+```
+or can be do with YUM
+```
+yum localinstall nxlog-1.4.581-1.x86_64.rpm
+```
+After the package is installed check and edit the configuration file located at `/etc/nxlog/nxlog.conf`. It contains an example configuration which you will likely want to modify to suit your needs.
+
 
 ## Quick overview of important locations for files
 ### Elasticsearch:
@@ -112,7 +138,11 @@ sudo chown -R www-data:www-data /var/www
 
 ### Kibana
 * Everything is in: `/var/www/kibana3`
- 
+
+### Nxlog
+* Binaries and stuff: `/usr/bin/nxlog`
+* Configuration: `DEB:/etc/nxlog/nxlog.conf, RPM:/etc/nxlog.conf`
+* Logs: `/var/log/nxlog`
 
 ## Configurations
 ### Elasticsearch
@@ -268,4 +298,8 @@ Useful references:
 
 Once you have written a configuration, you can test it by running `/opt/logstash/bin/logstash -t -f /etc/logstash/conf.d/` Then, when the config-test succeeds, just run `sudo service logstash start` to get going, and `tail -f /var/log/logstash/logstash.log` to make sure that everything is OK.
 
-Here is an example of SSL input Logstash.
+Here is an example of Logstash configuration.
+* [logstash-cfe3-with-ssl-nxlog.conf](https://github.com/phnakarin/ELK/blob/master/logstash/conf.d/logstash-cfe3-with-ssl-nxlog.conf)
+* [logstash-cfe3-with-udp-nxlog.conf](https://github.com/phnakarin/ELK/blob/master/logstash/conf.d/logstash-cfe3-with-udp-nxlog.conf)
+
+### Nxlog
