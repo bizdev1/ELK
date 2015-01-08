@@ -1,14 +1,14 @@
 ELK (Elasticsearch, Logstash and Kibana)
 ===
 
-All about my ELK configurations + nxlog as a log forwarder
+All about my ELK configurations + Nxlog as a log forwarder
 
 The Elasticsearch, Logstash, Kibana (ELK) stack has become very popular recently for cheap and easy centralized logging. We will go over the installation of Elasticsearch, Logstash and Kibana, and how to configure them to gather and visualize the CFEngine outputs of my systems in a centralized location.
 * Logstash is an open source tool for collecting, parsing, and storing logs for future use. 
 * Kibana is a web interface that can be used to search and view the logs that Logstash has indexed. 
 * Both of these tools are based on Elasticsearch. Elasticsearch, Logstash, and Kibana, when used together is known as an ELK stack.
 
-It is possible to use Logstash to gather logs of all types, but we will limit the scope of this tutorial to CFEngine related log gathering. For a log forwarder, we are going to use NXlog instead of Logstash Forwarder. NXlog is an open source log management tool available at no cost. Why? you better to follow this page. http://nxlog.org/products/nxlog-community-edition/features
+It is possible to use Logstash to gather logs of all types, but we will limit the scope of this tutorial to CFEngine related log gathering. For a log forwarder, we are going to use NXlog instead of Logstash Forwarder. NXlog is an open source log management tool available at no cost. Why? you would better follow this page for a clear veiw. :-) http://nxlog.org/products/nxlog-community-edition/features
 
 I'm setting ELK up on a fresh install of Ubuntu Server 14.04 LTS. virtual machine with 2GB memory and 2 CPUs.
 
@@ -318,3 +318,14 @@ Here is an example of Nxlog configuration.
 Once all components are up and running. Then we can head on over to Kibana, choose the included `"Logstash Dashboard"` and look at all your pretty logs! or you can even inspect your performance and data directly from Elasticsearch Bigdesk or elasticsearch-head.
 
 **"Have a lot of fun ..." :-P**
+
+### ELK image example
+
+* **Kibana**
+![Kibana3](/images/kibana3.png)
+
+* **Elasticsearch-Bigdesk**
+![Elasticsearch-Bigdesk](/images/elasticsearch-bigdesk.png)
+
+* **Elasticsearch-Head**
+![Elasticsearch-Head](/images/elasticsearch-head.png)
